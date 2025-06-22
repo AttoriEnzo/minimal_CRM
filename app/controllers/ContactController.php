@@ -38,93 +38,88 @@ class ContactController {
     }
 
     public function add() {
-        if (!isset($_SESSION['role'])) {
-            $_SESSION['message'] = "Devi effettuare il login per aggiungere contatti.";
-            $_SESSION['message_type'] = "error";
-            header("Location: index.php?page=login");
-            exit();
-        }
-
-        $contact = [];
-
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $contact_data = [
-                'first_name' => $_POST['first_name'] ?? '',
-                'last_name' => $_POST['last_name'] ?? '',
-                'email' => $_POST['email'] ?? '',
-                'phone' => $_POST['phone'] ?? '',
-                'company' => $_POST['company'] ?? '',
-                'last_contact_date' => $_POST['last_contact_date'] ?? null,
-                'contact_medium' => $_POST['contact_medium'] ?? '',
-                'order_executed' => isset($_POST['order_executed']) ? 1 : 0,
-                'client_type' => $_POST['client_type'] ?? 'Privato',
-                'tax_code' => $_POST['tax_code'] ?? '',
-                'vat_number' => $_POST['vat_number'] ?? '',
-                'sdi' => $_POST['sdi'] ?? '',
-                'company_address' => $_POST['company_address'] ?? '',
-                'company_city' => $_POST['company_city'] ?? '',
-                'company_zip' => $_POST['company_zip'] ?? '',
-                'company_province' => $_POST['company_province'] ?? '',
-                'pec' => $_POST['pec'] ?? '',
-                'mobile_phone' => $_POST['mobile_phone'] ?? ''
-            ];
-
-            $errors = [];
-            if (empty($contact_data['first_name'])) {
-                $errors[] = "Il nome è obbligatorio.";
-            }
-            if (empty($contact_data['last_name'])) {
-                $errors[] = "Il cognome è obbligatorio.";
-            }
-//           if (empty($contact_data['company'])) {
-//                $errors[] = "L'azienda è obbligatoria.";
-
-if (($contact_data['client_type'] !== 'Privato') && empty($contact_data['company'])) {
-    $errors[] = "L'azienda è obbligatoria per clienti business.";
-}
-
-            if (!empty($contact_data['email']) && !filter_var($contact_data['email'], FILTER_VALIDATE_EMAIL)) {
-                $errors[] = "L'indirizzo email non è valido.";
-            }
-            $errors = array_merge($errors, $this->contactModel->validateTaxVatFields($contact_data));
-
-            if (empty($errors)) {
-                foreach ($contact_data as $key => $value) {
-                    if (property_exists($this->contactModel, $key)) {
-                        $this->contactModel->$key = $value;
-                    }
-                }
-
-                $result = $this->contactModel->create();
-
-                if ($result['success']) {
-                    $_SESSION['message'] = "Contatto aggiunto con successo!";
-                    $_SESSION['message_type'] = "success";
-                    header("Location: index.php?page=contacts");
-                    exit();
-                } else {
-                    $_SESSION['message'] = "Errore durante l'aggiunta del contatto: " . ($result['error'] ?? 'Errore sconosciuto.');
-                    $_SESSION['message_type'] = "error";
-                    $contact = $contact_data;
-		$client_types = ['Privato',
-    'Ditta individuale',
-    'Azienda/Società' ];
-                    require_once __DIR__ . '/../../views/contacts/add_edit.php';
-                    return;
-                }
-            } else {
-                $_SESSION['message'] = "Errore di validazione: " . implode(" ", $errors);
-                $_SESSION['message_type'] = "error";
-                $contact = $contact_data;
-		$client_types = ['Privato', 'Azienda', 'PA'];
-                require_once __DIR__ . '/../views/contacts/add_edit.php';
-                return;
-            }
-        }
-		$client_types = ['Privato', 'Azienda', 'PA'];
-        require_once __DIR__ . '/../views/contacts/add_edit.php';
+    // 1. CONTROLLO AUTENTICAZIONE UTENTE
+    if (!isset($_SESSION['role'])) {
+        $_SESSION['message'] = "Devi effettuare il login per aggiungere contatti.";
+        $_SESSION['message_type'] = "error";
+        header("Location: index.php?page=login");
+        exit();
     }
 
+    // 2. DEFINIZIONE VARIABILI PER LA VISTA
+    $action_url = 'index.php?page=contacts&action=add'; // URL corretto per l'action del form
+    $contact = []; // Array per pre-compilare il form in caso di errore
+    $client_types = ['Privato', 'Ditta individuale', 'Azienda/Società', 'PA'];
+    $errors = [];
+
+    // 3. GESTIONE DELLA RICHIESTA POST (invio del form)
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $contact_data = [
+            'first_name' => $_POST['first_name'] ?? '',
+            'last_name' => $_POST['last_name'] ?? '',
+            'email' => $_POST['email'] ?? '',
+            'phone' => $_POST['phone'] ?? '',
+            'company' => $_POST['company'] ?? '',
+            'last_contact_date' => $_POST['last_contact_date'] ?? null,
+            'contact_medium' => $_POST['contact_medium'] ?? '',
+            'order_executed' => isset($_POST['order_executed']) ? 1 : 0,
+            'client_type' => $_POST['client_type'] ?? 'Privato',
+            'tax_code' => $_POST['tax_code'] ?? '',
+            'vat_number' => $_POST['vat_number'] ?? '',
+            'sdi' => $_POST['sdi'] ?? '',
+            'company_address' => $_POST['company_address'] ?? '',
+            'company_city' => $_POST['company_city'] ?? '',
+            'company_zip' => $_POST['company_zip'] ?? '',
+            'company_province' => $_POST['company_province'] ?? '',
+            'pec' => $_POST['pec'] ?? '',
+            'mobile_phone' => $_POST['mobile_phone'] ?? ''
+        ];
+
+        $contact = $contact_data;
+
+        // --- Validazione ---
+        if (empty($contact_data['first_name'])) {
+            $errors[] = "Il nome è obbligatorio.";
+        }
+        if (empty($contact_data['last_name'])) {
+            $errors[] = "Il cognome è obbligatorio.";
+        }
+        if (($contact_data['client_type'] !== 'Privato') && empty($contact_data['company'])) {
+            $errors[] = "L'azienda è obbligatoria per clienti business.";
+        }
+        if (!empty($contact_data['email']) && !filter_var($contact_data['email'], FILTER_VALIDATE_EMAIL)) {
+            $errors[] = "L'indirizzo email non è valido.";
+        }
+        $errors = array_merge($errors, $this->contactModel->validateTaxVatFields($contact_data));
+        // --- Fine Validazione ---
+
+        if (empty($errors)) {
+            foreach ($contact_data as $key => $value) {
+                if (property_exists($this->contactModel, $key)) {
+                    $this->contactModel->$key = $value;
+                }
+            }
+
+            $result = $this->contactModel->create();
+
+            if ($result['success']) {
+                $_SESSION['message'] = "Contatto aggiunto con successo!";
+                $_SESSION['message_type'] = "success";
+                header("Location: index.php?page=contacts");
+                exit();
+            } else {
+                $_SESSION['message'] = "Errore durante l'aggiunta del contatto: " . ($result['error'] ?? 'Errore sconosciuto.');
+                $_SESSION['message_type'] = "error";
+            }
+        } else {
+            $_SESSION['message'] = "Errore di validazione: " . implode(" ", $errors);
+            $_SESSION['message_type'] = "error";
+        }
+    }
+
+    // 4. CARICAMENTO DELLA VISTA
+    require_once __DIR__ . '/../views/contacts/add_edit.php';
+}
     public function edit($id) {
 error_log("Dati POST ricevuti:\n" . print_r($_POST, true));
 error_log("ID contatto: " . $id);

@@ -11,6 +11,7 @@ $order_executed_checked = isset($contact['order_executed']) && $contact['order_e
 <!--  <form method="POST" action="<?php // echo $action_url; ?>" -->
 <form method="POST" action="<?= $action_url ?>" enctype="multipart/form-data"><class="bg-white p-6 rounded-lg shadow-md">
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+       
         
         <!-- Colonna 1: Dati Personali -->
         <div class="space-y-4">
@@ -161,13 +162,13 @@ $order_executed_checked = isset($contact['order_executed']) && $contact['order_e
     </div>
 </form>
 
-// <script>
+ <script>
 // document.querySelector('form').addEventListener('submit', function(e) {
 //    e.preventDefault();
-//    console.log("Dati che verranno inviati:", new FormData(this));
-//    this.submit(); // Rimuovi questa riga dopo il debug
+ //   console.log("Dati che verranno inviati:", new FormData(this));
+ //   this.submit(); // Rimuovi questa riga dopo il debug
 // });
-// </script>
+ </script>
 
 <!-- Script per gestione dinamica dei campi -->
 <script>

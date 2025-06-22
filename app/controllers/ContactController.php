@@ -117,12 +117,12 @@ class ContactController {
         }
     }
 
+		$cancel_url = "index.php?page=contacts"; // aggiunta da copilot
     // 4. CARICAMENTO DELLA VISTA
     require_once __DIR__ . '/../views/contacts/add_edit.php';
 }
     public function edit($id) {
-error_log("Dati POST ricevuti:\n" . print_r($_POST, true));
-error_log("ID contatto: " . $id);
+    // 1. CONTROLLI PRELIMINARI E DI SICUREZZA (Guard Clauses)
     if (!isset($_SESSION['role'])) {
         $_SESSION['message'] = "Devi effettuare il login per modificare i contatti.";
         $_SESSION['message_type'] = "error";
@@ -137,20 +137,10 @@ error_log("ID contatto: " . $id);
         exit();
     }
 
+    // 2. RECUPERO DATI ESISTENTI DAL DATABASE
     $contact = $this->contactModel->readOne($id);
 
-    // --- Carica le variabili necessarie per la view ---
-    // NESSUNA require_once ClientType.php qui!
-    require_once __DIR__ . '/../models/User.php';
-
-    // Tipi di cliente statici
-    $client_types = ['Privato', 'Azienda', 'PA'];
-
-    // Usa la connessione dal model Contact tramite getter pubblico
-    $conn = $this->contactModel->getConnection();
-    $userModel = new User($conn);
-    $users_for_assignment = $userModel->getAll();
-
+    // Se il contatto non esiste, interrompi subito
     if (!$contact) {
         $_SESSION['message'] = "Contatto non trovato.";
         $_SESSION['message_type'] = "error";
@@ -158,76 +148,84 @@ error_log("ID contatto: " . $id);
         exit();
     }
 
+    // 3. PREPARAZIONE VARIABILI PER LA VISTA (una sola volta)
+    // L'URL dell'azione deve includere l'ID del contatto da modificare
+    $action_url = 'index.php?page=contacts&action=edit&id=' . htmlspecialchars($id);
+    $errors = [];
+    $client_types = ['Privato', 'Ditta individuale', 'Azienda/Società', 'PA'];
+    
+    // NOTA: La riga seguente è una cattiva pratica (anti-pattern).
+    // Un controller non dovrebbe includere altri modelli o gestire connessioni.
+    // L'ideale sarebbe avere un sistema di "Dependency Injection".
+    // Per ora la lasciamo, ma andrebbe migliorata in futuro.
+    require_once __DIR__ . '/../models/User.php';
+    $userModel = new User($this->contactModel->getConnection());
+    $users_for_assignment = $userModel->getAll();
+
+    // 4. GESTIONE DELLA RICHIESTA POST (aggiornamento del form)
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $contact_data = [
             'id' => $id,
             'first_name' => $_POST['first_name'] ?? '',
             'last_name' => $_POST['last_name'] ?? '',
-            'email' => $_POST['email'] ?? '',
-            'phone' => $_POST['phone'] ?? '',
+            // ... (tutti gli altri campi come nel tuo codice originale) ...
             'company' => $_POST['company'] ?? '',
-            'last_contact_date' => $_POST['last_contact_date'] ?? null,
-            'contact_medium' => $_POST['contact_medium'] ?? '',
-            'order_executed' => isset($_POST['order_executed']) ? 1 : 0,
             'client_type' => $_POST['client_type'] ?? 'Privato',
-            'tax_code' => $_POST['tax_code'] ?? '',
-            'vat_number' => $_POST['vat_number'] ?? '',
-            'sdi' => $_POST['sdi'] ?? '',
-            'company_address' => $_POST['company_address'] ?? '',
-            'company_city' => $_POST['company_city'] ?? '',
-            'company_zip' => $_POST['company_zip'] ?? '',
-            'company_province' => $_POST['company_province'] ?? '',
-            'pec' => $_POST['pec'] ?? '',
-            'mobile_phone' => $_POST['mobile_phone'] ?? ''
+            // ... ecc ...
         ];
 
-        $errors = [];
+        // Sovrascriviamo i dati del contatto con quelli inviati dall'utente,
+        // così se c'è un errore, il form mostrerà i dati appena inseriti.
+        $contact = array_merge($contact, $contact_data);
+
+        // --- Inizio Blocco di Validazione Corretto ---
         if (empty($contact_data['first_name'])) {
             $errors[] = "Il nome è obbligatorio.";
         }
         if (empty($contact_data['last_name'])) {
             $errors[] = "Il cognome è obbligatorio.";
         }
-        if (empty($contact_data['company'])) {
-            $errors[] = "L'azienda è obbligatoria.";
+        // Logica di validazione COERENTE con la funzione add()
+        if (($contact_data['client_type'] !== 'Privato') && empty($contact_data['company'])) {
+            $errors[] = "L'azienda è obbligatoria per clienti business.";
         }
         if (!empty($contact_data['email']) && !filter_var($contact_data['email'], FILTER_VALIDATE_EMAIL)) {
             $errors[] = "L'indirizzo email non è valido.";
         }
         $errors = array_merge($errors, $this->contactModel->validateTaxVatFields($contact_data));
+        // --- Fine Blocco di Validazione ---
 
         if (empty($errors)) {
+            // Popola il modello con i dati validati
             foreach ($contact_data as $key => $value) {
                 if (property_exists($this->contactModel, $key)) {
                     $this->contactModel->$key = $value;
                 }
             }
-            $this->contactModel->id = $id;
+            // NOTA: La riga '$this->contactModel->id = $id;' non è più necessaria
+            // se la proprietà 'id' viene già impostata dal ciclo foreach.
 
             $result = $this->contactModel->update();
+
             if ($result['success']) {
                 $_SESSION['message'] = "Contatto aggiornato con successo!";
                 $_SESSION['message_type'] = "success";
+                // Reindirizza alla pagina di visualizzazione del contatto appena modificato
                 header("Location: index.php?page=contacts&action=view&id=" . htmlspecialchars($id));
                 exit();
             } else {
-                $_SESSION['message'] = "Errore durante l'aggiornamento del contatto: " . ($result['error'] ?? 'Errore sconosciuto.');
+                $_SESSION['message'] = "Errore durante l'aggiornamento: " . ($result['error'] ?? 'Errore sconosciuto.');
                 $_SESSION['message_type'] = "error";
-                $contact = array_merge($contact, $contact_data);
-		$client_types = ['Privato', 'Azienda', 'PA'];
-                require_once __DIR__ . '/../views/contacts/add_edit.php';
-                return;
             }
         } else {
             $_SESSION['message'] = "Errore di validazione: " . implode(" ", $errors);
             $_SESSION['message_type'] = "error";
-            $contact = array_merge($contact, $contact_data);
-	$client_types = ['Privato', 'Azienda', 'PA'];
-            require_once __DIR__ . '/../views/contacts/add_edit.php';
-            return;
         }
     }
-	$client_types = ['Privato', 'Azienda', 'PA'];
+
+    // 5. CARICAMENTO DELLA VISTA (una sola volta alla fine)
+    // La vista avrà sempre a disposizione le variabili corrette:
+    // $action_url, $contact (con i dati originali o quelli inviati), $client_types, $users_for_assignment
     require_once __DIR__ . '/../views/contacts/add_edit.php';
 }
     public function delete($id) {

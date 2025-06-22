@@ -161,13 +161,13 @@ $order_executed_checked = isset($contact['order_executed']) && $contact['order_e
     </div>
 </form>
 
-<script>
-document.querySelector('form').addEventListener('submit', function(e) {
-    e.preventDefault();
-    console.log("Dati che verranno inviati:", new FormData(this));
-    this.submit(); // Rimuovi questa riga dopo il debug
-});
-</script>
+// <script>
+// document.querySelector('form').addEventListener('submit', function(e) {
+//    e.preventDefault();
+//    console.log("Dati che verranno inviati:", new FormData(this));
+//    this.submit(); // Rimuovi questa riga dopo il debug
+// });
+// </script>
 
 <!-- Script per gestione dinamica dei campi -->
 <script>

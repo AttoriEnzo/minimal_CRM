@@ -201,25 +201,25 @@ public function getConnection() {
 
     $stmt = $this->conn->prepare($query);
 
-    // Sanifica i dati
-    $this->first_name = strip_tags($this->first_name);
-    $this->last_name = strip_tags($this->last_name);
-    $this->email = strip_tags($this->email);
-    $this->phone = strip_tags($this->phone);
-    $this->company = strip_tags($this->company);
-    $this->last_contact_date = !empty($this->last_contact_date) ? strip_tags($this->last_contact_date) : null;
-    $this->contact_medium = strip_tags($this->contact_medium);
-    $this->order_executed = (int)$this->order_executed;
-    $this->client_type = strip_tags($this->client_type);
-    $this->tax_code = strip_tags($this->tax_code);
-    $this->vat_number = strip_tags($this->vat_number);
-    $this->sdi = strip_tags($this->sdi);
-    $this->company_address = strip_tags($this->company_address);
-    $this->company_city = strip_tags($this->company_city);
-    $this->company_zip = strip_tags($this->company_zip);
-    $this->company_province = strip_tags($this->company_province);
-    $this->pec = strip_tags($this->pec);
-    $this->mobile_phone = strip_tags($this->mobile_phone);
+    // Sanifica i dati in modo corretto e sicuro per PHP 8+
+
+// Per i campi di testo, usa `strip_tags` con il fallback a stringa vuota `?? ''` per evitare di passare `null`
+$this->first_name = strip_tags($this->first_name ?? '');
+$this->last_name = strip_tags($this->last_name ?? '');
+$this->email = strip_tags($this->email ?? '');
+$this->phone = strip_tags($this->phone ?? '');
+$this->company = strip_tags($this->company ?? '');
+$this->contact_medium = strip_tags($this->contact_medium ?? '');
+$this->client_type = strip_tags($this->client_type ?? '');
+$this->tax_code = strip_tags($this->tax_code ?? '');
+$this->vat_number = strip_tags($this->vat_number ?? '');
+$this->sdi = strip_tags($this->sdi ?? '');
+$this->company_address = strip_tags($this->company_address ?? '');
+$this->company_city = strip_tags($this->company_city ?? '');
+$this->company_zip = strip_tags($this->company_zip ?? '');
+$this->company_province = strip_tags($this->company_province ?? '');
+$this->pec = strip_tags($this->pec ?? '');
+$this->mobile_phone = strip_tags($this->mobile_phone ?? '');
 
     // Esegui direttamente con execute()
     $result = $stmt->execute([
@@ -244,13 +244,16 @@ public function getConnection() {
         $this->id
     ]);
 
-    if ($result) {
-        return ['success' => true, 'affected_rows' => $stmt->rowCount()];
-    } else {
-        $error = $stmt->errorInfo();
-        error_log("Errore aggiornamento contatto: " . $error[2]);
-        return ['success' => false, 'error' => $error[2]];
-    }
+    // CODICE CORRETTO (solo sintassi MySQLi)
+if ($result) {
+    // CORRETTO: usiamo la proprietà 'affected_rows' di mysqli_stmt
+    return ['success' => true, 'affected_rows' => $stmt->affected_rows];
+} else {
+    // CORRETTO: usiamo la proprietà 'error' di mysqli_stmt, che è una stringa diretta
+    $error_message = $stmt->error;
+    error_log("Errore aggiornamento contatto: " . $error_message);
+    return ['success' => false, 'error' => $error_message];
+}
 }
     /**
      * Elimina un contatto specifico dal database.
